@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-import sqlite3, json, os
+import sqlite3, json, os, threading
 from datetime import datetime, timedelta
 import yfinance as yf
 import pandas as pd
@@ -115,9 +115,19 @@ def ensure_data(symbol: str):
         fetch_and_store(symbol)
 
 
+def prefetch_all():
+    for symbol in COMPANIES:
+        try:
+            fetch_and_store(symbol)
+            print(f"Prefetched {symbol}")
+        except Exception as e:
+            print(f"Prefetch failed for {symbol}: {e}")
+
 @app.on_event("startup")
 def startup():
     init_db()
+    thread = threading.Thread(target=prefetch_all, daemon=True)
+    thread.start()
 
 
 # ── Endpoints ────────────────────────────────────────────────
