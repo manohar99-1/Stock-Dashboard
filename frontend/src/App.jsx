@@ -24,12 +24,19 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
-    axios.get(`${API}/companies`).then(r => setCompanies(r.data))
-    // Retry gainers up to 3 times with delay
+    axios.get(`${API}/companies`).then(r => {
+      setCompanies(r.data)
+      // Auto-load RELIANCE on first visit
+      selectCompany('RELIANCE')
+    })
+    // Retry gainers up to 8 times with 5s delay (covers cold start ~40s)
     const fetchGainers = (attempt = 0) => {
       axios.get(`${API}/gainers-losers`)
-        .then(r => setGainers(r.data))
-        .catch(() => { if (attempt < 3) setTimeout(() => fetchGainers(attempt + 1), 3000) })
+        .then(r => {
+          if (r.data.top_gainers?.length) setGainers(r.data)
+          else if (attempt < 8) setTimeout(() => fetchGainers(attempt + 1), 5000)
+        })
+        .catch(() => { if (attempt < 8) setTimeout(() => fetchGainers(attempt + 1), 5000) })
     }
     fetchGainers()
   }, [])
@@ -156,7 +163,10 @@ export default function App() {
             <GainerCard title="📉 Top Losers" items={gainers.top_losers} color="#ef4444" />
           </div>
         ) : (
-          <div style={{ color: '#475569', marginBottom: 20, fontSize: 14 }}>Loading market data...</div>
+          <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+            <GainerCard title="🚀 Top Gainers" items={null} color="#10b981" />
+            <GainerCard title="📉 Top Losers" items={null} color="#ef4444" />
+          </div>
         )}
 
         {!selected && (
